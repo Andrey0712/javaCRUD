@@ -13,14 +13,14 @@ public class Main {
     static Scanner in = new Scanner(System.in);
     public static void main(String[] args) {
         String strConn = "jdbc:mariadb://localhost:3306/javacrud1";
-        //InsertIntoDB(strConn);
+        InsertIntoDB(strConn);
         List<Product> list = SelectFromDB(strConn);
         PrintProductList(list);
         UpdateForDB(strConn);
         list = SelectFromDB(strConn);
         PrintProductList(list);
-//        DeleteFromDB(strConn);
-//        PrintProductList(SelectFromDB(strConn));
+        DeleteFromDB(strConn);
+        PrintProductList(SelectFromDB(strConn));
     }
 
     private static void PrintProductList(List<Product> prods) {
@@ -29,8 +29,9 @@ public class Main {
         }
     }
 
-    private static  void InsertIntoDB(String strConn) {
-        try(Connection con = DriverManager.getConnection(strConn, "root", "")) {
+    private static void InsertIntoDB(String strConn) {
+        boolean boolPrice = false;
+        try (Connection con = DriverManager.getConnection(strConn, "root", "")) {
             System.out.println("Successful connection");
             String query = "INSERT INTO `products` (`name`, `price`, `description`) " +
                     "VALUES (?, ?, ?);";
@@ -38,21 +39,31 @@ public class Main {
                 String name, description;
                 double price;
                 System.out.print("Enter name: ");
-                name = in.nextLine();
-                System.out.print("Enter price: ");
-                price = Double.parseDouble(in.nextLine());
+                if (in.hasNextLine()) {
+                    name = in.nextLine();
+                    stmt.setString(1, name);
+                } else
+                    System.out.println("Ошибка ввода. Введите цену в строковом формате!");
+
+                while (!boolPrice) {
+                    try {
+                        System.out.print("Введите цену : ");
+                        price = Double.parseDouble(in.nextLine());
+                        stmt.setBigDecimal(2, new BigDecimal(price));
+                        boolPrice = true;
+                    } catch (Exception e) {
+                        System.out.println("Ошибка выбора операции. Введите целое число!");
+                    }
+                }
+
                 System.out.print("Enter description: ");
                 description = in.nextLine();
-
-                stmt.setString(1, name);
-                stmt.setBigDecimal(2, new BigDecimal(price));
                 stmt.setString(3, description);
 
                 int rows = stmt.executeUpdate();//к-во измененіх рядочков в БД
-                System.out.println("Update rows: " +rows);
+                System.out.println("Update rows: " + rows);
 
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 System.out.println("Error statements: " + ex.getMessage());
             }
 
