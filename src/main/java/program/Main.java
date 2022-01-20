@@ -1,26 +1,35 @@
 package program;
 
+import com.github.javafaker.Faker;
+import com.github.javafaker.service.RandomService;
+
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Scanner;
 
 public class Main {
     static Scanner in = new Scanner(System.in);
+    private static int getRandomNumber(int min, int max) {
+        return (int) ((Math.random() * (max - min)) + min);
+    }
     public static void main(String[] args) {
         String strConn = "jdbc:mariadb://localhost:3306/javacrud1";
-        InsertIntoDB(strConn);
+        //InsertIntoDB(strConn);
+        SeedDBFacker(strConn);
         List<Product> list = SelectFromDB(strConn);
         PrintProductList(list);
-        UpdateForDB(strConn);
-        list = SelectFromDB(strConn);
-        PrintProductList(list);
-        DeleteFromDB(strConn);
-        PrintProductList(SelectFromDB(strConn));
+//        UpdateForDB(strConn);
+//        list = SelectFromDB(strConn);
+//        PrintProductList(list);
+//        DeleteFromDB(strConn);
+//        PrintProductList(SelectFromDB(strConn));
     }
 
     private static void PrintProductList(List<Product> prods) {
@@ -65,6 +74,66 @@ public class Main {
 
             } catch (Exception ex) {
                 System.out.println("Error statements: " + ex.getMessage());
+            }
+
+        } catch (Exception ex) {
+            System.out.println("Error connection: " + ex.getMessage());
+        }
+
+    }
+
+    private static  void SeedDBFacker(String strConn) {
+        Faker faker = new Faker(
+                new Locale("ru"));
+        try(Connection con = DriverManager.getConnection(strConn, "root", "")) {
+            System.out.println("Successful connection");
+
+            String selectSql = "SELECT * FROM products";
+            try {
+                PreparedStatement ps = con.prepareStatement(selectSql);//создаем стейтман и передаем команду
+                ResultSet resultSet = ps.executeQuery();//создаем результат запроса
+                List<Product> products = new ArrayList<>();//создаем лист с продуктами
+                while (resultSet.next()) {
+                    Product p = new Product(resultSet.getInt("id"),
+                            resultSet.getString("name"),
+                            resultSet.getBigDecimal("price"),
+                            resultSet.getString("description"));
+                    products.add(p);
+                }
+                if(products==null||products.size()<=0) {
+                    String query = "INSERT INTO `products` (`name`, `price`, `description`) " +
+                            "VALUES (?, ?, ?);";
+                    int countProd=0;
+                    System.out.print("Сколько продуктов закинуть в базу: ");
+                    countProd= in.nextInt();
+                    for (
+                            int i=0;i<=countProd-1;i++){
+                        try (PreparedStatement stmt = con.prepareStatement(query)) {
+                            String name, description;
+                            double price;
+
+                            name = faker.food().vegetable();
+
+                            price = getRandomNumber(10,200);
+
+                            description = faker.food().ingredient();
+
+                            stmt.setString(1, name);
+                            stmt.setBigDecimal(2, new BigDecimal(price));
+                            stmt.setString(3, description);
+
+                            int rows = stmt.executeUpdate();
+                            System.out.println("Update rows: " +rows);
+
+                        }
+                        catch (Exception ex) {
+                            System.out.println("Error statements: " + ex.getMessage());
+                        }
+                    }
+                }
+
+            } catch (Exception ex) {
+                System.out.println("Error executeQuery: " + ex.getMessage());
             }
 
         } catch (Exception ex) {
